@@ -5,16 +5,16 @@ if (isset($_COOKIE['at_hash'])) {
 	$current_user = json_file_get(__DIR__ . '/../var/tokens.json', $_COOKIE['at_hash']);
 	if (empty($current_user)) {
 		site_log('找不到權杖');
-		set_cookie('at_hash');
+		set_cookie('at_hash', '', -1, CONFIG['site.base']);
 	}
 }
 
 if (isset($current_user) && $current_user->exp < $_SERVER['REQUEST_TIME']) {
 	site_log("$current_user->email 的權杖已逾期");
-	set_cookie('at_hash');
+	// set_cookie('at_hash', '', -1, CONFIG['site.base']);
 	if ($current_user->refresh_token) {
 		$time = microtime(true);
-		$res = fetch_curl('https://oauth2.googleapis.com/token', array(
+		$res = curl_fetch('https://oauth2.googleapis.com/token', array(
 			'method' => 'POST',
 			'body' => array(
 				'grant_type' => 'refresh_token',
@@ -38,7 +38,7 @@ if (isset($current_user) && $current_user->exp < $_SERVER['REQUEST_TIME']) {
 		}
 	}
 	else {
-		set_cookie('at_hash');
+		set_cookie('at_hash', '', -1, CONFIG['site.base']);
 		unset($current_user);
 	}
 }

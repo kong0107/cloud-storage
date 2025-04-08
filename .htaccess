@@ -19,11 +19,11 @@ AddCharset utf-8 .txt .html .htm .css .js .json .xml .md
 	RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,QSA,L]
 
 	# 禁止連向隱藏目錄
-	RewriteRule (^|/)\. - [R=404,L]
+	RewriteRule (^|/)\. - [F,L]
 
 	# 常見的惡意爬蟲
-	RewriteRule wp-admin - [R=404,L]
-	RewriteRule wp-inlcudes - [R=404,L]
+	RewriteRule wp-admin - [F,L]
+	RewriteRule wp-inlcudes - [F,L]
 
 	# 根目錄中，僅有 favicon.ico 和 robots.txt 是可存取的靜態檔案
 	RewriteRule ^favicon\.ico$ - [L]

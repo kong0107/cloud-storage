@@ -1,25 +1,14 @@
 [Site]
-site.base = "/php-website-template/"
+site.base = "/cloud-storage/"
 site.name = "MyWebsite"
 language = "zh-Hant-TW"
 locale = "zh_TW"
 generator = "RichDogStudio"
 dir.logs = "var/logs"
-dir.uploads = "var/uploads"
-
-
-[PDO]
-dsn.driver = "mysql"
-dsn.host = "localhost"
-dsn.dbname = "test"
-dsn.charset = "utf8mb4"
-pdo.username = null
-pdo.password = null
+dir.storage = "var/storage"
 
 
 [Google]
 google.id = ""
 google.secret = ""
-google.auth_uri = "https://accounts.google.com/o/oauth2/auth"
-google.token_uri = "https://oauth2.googleapis.com/token"
 google.redirect_uri = "login.php"

@@ -86,8 +86,13 @@ function shutdown_function() {
 		number_format(memory_get_peak_usage())
 	);
 
+	$user = null;
+	if (isset($current_user)) {
+		$user = $current_user->email;
+		if (str_ends_with($user, '@gmail.com')) $user = substr($user, 0, -10);
+	}
 	$request_info = array(
-		'user' => isset($current_user) ? $current_user->email : null,
+		'user' => $user,
 		'tcp_ip' => $_SERVER['REMOTE_ADDR']
 	);
 	if (preg_match_all('/(Chrome|Firefox|Edge?|Safari|Opera)\/\d+\.\d+/i', $_SERVER['HTTP_USER_AGENT'], $matches))

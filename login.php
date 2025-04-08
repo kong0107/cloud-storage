@@ -9,7 +9,7 @@ require_once './lib/init.php';
 
 /// 登出
 if (isset($_GET['logout'])) {
-	set_cookie('at_hash');
+	set_cookie('at_hash', '', -1, CONFIG['site.base']);
 	if (isset($current_user)) site_log("$current_user->email 主動登出了。");
 	if (isset($_COOKIE['at_hash'])) json_file_set('./var/tokens.json', $_COOKIE['at_hash']);
 	header('Location: .');
@@ -27,8 +27,8 @@ if (empty($_GET['state'])) {
 		if ($parts['host'] === $_SERVER['HTTP_HOST']
 			&& ! str_ends_with($parts['path'], 'login.php')
 		) {
-			$referer = substr($_SERVER['HTTP_REFERER'], strpos($_SERVER['HTTP_REFERER'], '/', 10));
-			$state .= $referer;
+			$referrer = substr($_SERVER['HTTP_REFERER'], strpos($_SERVER['HTTP_REFERER'], '/', 10));
+			$state .= $referrer;
 		}
 	} // append redirect target after csrf token
 
@@ -54,7 +54,7 @@ if (! str_starts_with($_GET['state'], $csrf)) {
 }
 
 $time = microtime(true);
-$res = fetch_curl('https://oauth2.googleapis.com/token', array(
+$res = curl_fetch('https://oauth2.googleapis.com/token', array(
 	'method' => 'POST',
 	'body' => array(
 		'grant_type' => 'authorization_code',
@@ -79,16 +79,16 @@ json_file_write('./var/last_access_token.json', (object) $res);
  * 直接拿 at_hash 當 key ，存在 Cookie ；其他需要的則存在伺服器。
  * Cookie 存活的時間要比 token 長，伺服器才有可能知道要去確認 token 是否過期。
  */
-set_cookie('at_hash', $id_token->at_hash, 3600 * 168);
+set_cookie('at_hash', $id_token->at_hash, 3600 * 168, CONFIG['site.base']);
 
 json_file_set('./var/tokens.json', $id_token->at_hash, array(
 	'access_token' => $res['body']->access_token,
-	'refresh_token' => property_exists($res['body'], 'refresh_token') ? $res['body']->refresh_token : null,
+	'refresh_token' => $res['body']->refresh_token ?? null,
 	'exp' => $id_token->exp,
 	'email' => $id_token->email,
 	'name' => $id_token->name
 ));
 
 site_log("$id_token->email 登入成功");
-$referer = substr($_GET['state'], strlen($csrf));
-header('Location: ' . ($referer ?: '.'));
+$referrer = substr($_GET['state'], strlen($csrf));
+header('Location: ' . ($referrer ?: '.'));
