@@ -1,15 +1,22 @@
 <?php
+/**
+ * Authentication for users already logged in.
+ */
 require_once __DIR__ . '/init.php';
+$file_tokens = __DIR__ . '/../var/tokens.json';
 
 if (isset($_COOKIE['at_hash'])) {
-	$current_user = json_file_get(__DIR__ . '/../var/tokens.json', $_COOKIE['at_hash']);
+	$current_user = json_file_get_prop($file_tokens, $_COOKIE['at_hash']);
 	if (empty($current_user)) {
 		site_log('找不到權杖');
 		set_cookie('at_hash', '', -1, CONFIG['site.base']);
 	}
 }
 
-if (isset($current_user) && $current_user->exp < $_SERVER['REQUEST_TIME']) {
+/**
+ * @todo 在確定能用 refersh_token 之前，先不在 access_token 過期時就要求重複登入
+ */
+if (false && isset($current_user) && $current_user->exp < $_SERVER['REQUEST_TIME']) {
 	site_log("$current_user->email 的權杖已逾期");
 	// set_cookie('at_hash', '', -1, CONFIG['site.base']);
 	if ($current_user->refresh_token) {
@@ -32,9 +39,9 @@ if (isset($current_user) && $current_user->exp < $_SERVER['REQUEST_TIME']) {
 			site_log('重整權杖成功');
 			$res['body'] = json_decode($res['body']);
 			json_file_write('./var/last_refresh_token.json', $res);
-			$current_user->access_token = $res['body']->access_token;
+			// $current_user->access_token = $res['body']->access_token;
 			$current_user->exp = $_SERVER['REQUEST_TIME'] + $res['body']->expires_in;
-			json_file_set(__DIR__ . '/../var/tokens.json', $_COOKIE['at_hash'], $current_user);
+			json_file_set_prop($file_tokens, $_COOKIE['at_hash'], $current_user);
 		}
 	}
 	else {

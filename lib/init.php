@@ -17,6 +17,7 @@ if (! file_exists(DIR_VAR . '/config.ini'))
 	copy(DIR_VAR . '/config.ini.sample', DIR_VAR . '/config.ini');
 
 define('CONFIG', parse_ini_file(DIR_VAR . '/config.ini'));
+define('URL_BASE', 'https://' . $_SERVER['HTTP_HOST'] . CONFIG['site.base']);
 
 foreach (array('logs', 'uploads') as $dirname) {
 	$dirpath = CONFIG["dir.$dirname"];

@@ -13,6 +13,9 @@ header('Content-Type: text/html; charset=utf-8');
 	<base href="<?= CONFIG['site.base'] ?>">
 
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta name="referrer" content="same-origin">
+	<meta name="author" content="rich.dog.studio@gmail.com">
+
 	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 	<script src="https://cdn.jsdelivr.net/npm/kong-util@0.8.14/dist/all.js"></script>
 	<link rel="stylesheet" href="assets/main.css?<?= filemtime('assets/main.css') ?>">
