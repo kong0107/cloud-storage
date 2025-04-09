@@ -3,44 +3,26 @@ DirectoryIndex index.php index.html
 Options SymLinksIfOwnerMatch
 AddCharset utf-8 .txt .html .htm .css .js .json .xml .md
 
-<Files ".*"> # 禁止連向隱藏檔
-	Require all denied
-</Files>
-<Files "xmlrpc.php">
-	Require all denied
-</Files>
-
 <IfModule rewrite_module>
 	RewriteEngine On
-
-	# 強制 HTTPS ，除了 /.well-knwon/
 	RewriteRule ^\.well-known/ - [END]
+
+	# 直接禁止
+	RewriteRule ^\. - [F,L]
+	RewriteRule ^wp-(admin|includes) - [F,L]
+	RewriteRule ^xmlrpc\.php - [F,L]
+
+	# 強制 HTTPS
 	RewriteCond %{HTTPS} off
 	RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,QSA,L]
 
-	# 禁止連向隱藏目錄
-	RewriteRule (^|/)\. - [F,L]
-
-	# 常見的惡意爬蟲
-	RewriteRule wp-admin - [F,L]
-	RewriteRule wp-inlcudes - [F,L]
-
-	# 根目錄中，僅有 favicon.ico 和 robots.txt 是可存取的靜態檔案
-	RewriteRule ^favicon\.ico$ - [L]
-	RewriteRule ^robots\.txt$ - [L]
-	RewriteRule ^[^/]+\.php$ - [L]
-	RewriteRule ^[^/]+$ - [R=404,L] # 這條可能跟下面衝突
-
-	# 找不到就導向特定檔案。適用如 WordPress 的網址設計，或是想用相對路徑指定錯誤頁面。
-	# RewriteCond %{REQUEST_FILENAME} !-f
-	# RewriteCond %{REQUEST_FILENAME} !-d
-	# RewriteRule . error.php [QSA,L]
+	# browse/ 的通通導給 /index.php
+	RewriteRule ^browse(/|$) index.php [QSA,L]
 </IfModule>
 
 <IfModule headers_module>
-	Header always set Strict-Transport-Security max-age=31536000 env=HTTPS
 	Header always set Referrer-Policy same-origin
-	<FilesMatch "^(?!.+\.php$)">
-		Header always set Cache-Control "max-age=86400, must-revalidate, public"
-	</FilesMatch>
+	Header always set Strict-Transport-Security max-age=31536000 env=HTTPS
+	Header always set Content-Type "text/plain" "expr=-z %{CONTENT_TYPE}"
+	Header set Cache-Control "max-age=86400, must-revalidate, public" "expr=%{REQUEST_URI} !~ /\.php$/i"
 </IfModule>
