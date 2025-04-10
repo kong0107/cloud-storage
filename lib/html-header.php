@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/lib/init.php';
+require_once __DIR__ . '/html-prepare.php';
 header('Content-Type: text/html; charset=utf-8');
 ?>
 <!DOCTYPE html>
@@ -12,16 +12,18 @@ header('Content-Type: text/html; charset=utf-8');
 	<title><?= CONFIG['site.name'] ?></title>
 	<base href="<?= CONFIG['site.base'] ?>">
 
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<meta name="referrer" content="same-origin">
-	<meta name="author" content="rich.dog.studio@gmail.com">
+	<?php foreach ($meta_name_content as $name => $content): ?>
+		<meta name="<?= $name ?>" content="<?= $content ?>">
+	<?php endforeach; ?>
 
-	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-	<script src="https://cdn.jsdelivr.net/npm/kong-util@0.8.14/dist/all.js"></script>
-	<link rel="stylesheet" href="assets/main.css?<?= filemtime('assets/main.css') ?>">
+	<?php foreach ($link_href as $href): ?>
+		<link rel="stylesheet" href="<?= append_mtime($href) ?>">
+	<?php endforeach; ?>
 </head>
 <body>
-	<script src="assets/afterbegin.js?<?= filemtime('assets/afterbegin.js') ?>"></script>
+	<?php foreach ($script_src_afterbegin as $src): ?>
+		<script src="<?= append_mtime($src) ?>"></script>
+	<?php endforeach; ?>
 	<div class="container d-flex flex-column min-vh-100">
 		<header>
 			<nav class="navbar">

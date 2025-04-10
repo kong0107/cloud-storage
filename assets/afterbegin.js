@@ -1,1 +1,2 @@
 kongUtil.use();
+extendPrototype();

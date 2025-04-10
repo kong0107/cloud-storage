@@ -171,3 +171,9 @@ function finish($status = 204, $title = '', $meta = null) {
 
 	exit_json(array('errors' => array($obj)), $status);
 }
+
+
+function assert_login() {
+	global $current_user;
+	if (empty($current_user)) finish(401);
+}

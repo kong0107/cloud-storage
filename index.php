@@ -1,12 +1,11 @@
 <?php
-require_once './lib/user_authn.php';
-
-$path = substr($_SERVER['REQUEST_URI'], strlen(CONFIG['site.base']) + 6);
-// 若是目錄，前端要自動加上斜線（後端轉址會要寫死 RewriteBase ，比較麻煩）
-
-require 'html-header.php';
+require_once 'lib/html-prepare.php';
+$script_src_beforeend[] = 'assets/browse.js';
+require 'lib/html-header.php';
 ?>
 
-Request Path: <?= $path ?>
+<ol id="breadcrumbs" class="list-inline"></ol>
+<ul id="stat"></ul>
+<div id="content"></div>
 
-<?php require 'html-footer.php'; ?>
+<?php require 'lib/html-footer.php'; ?>

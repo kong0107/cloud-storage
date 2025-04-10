@@ -19,7 +19,7 @@ if (! file_exists(DIR_VAR . '/config.ini'))
 define('CONFIG', parse_ini_file(DIR_VAR . '/config.ini'));
 define('URL_BASE', 'https://' . $_SERVER['HTTP_HOST'] . CONFIG['site.base']);
 
-foreach (array('logs', 'uploads') as $dirname) {
+foreach (array('logs', 'storage') as $dirname) {
 	$dirpath = CONFIG["dir.$dirname"];
 	if (! str_starts_with($dirpath, '/') && substr($dirpath, 1, 1) !== ':') {
 		$dirpath = __DIR__ . "/../$dirpath";
