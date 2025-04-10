@@ -16,8 +16,9 @@ AddCharset utf-8 .txt .html .htm .css .js .json .xml .md
 	RewriteCond %{HTTPS} off
 	RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,QSA,L]
 
-	# browse/ 的通通導給 ./index.php
-	RewriteRule ^browse(/|$) index.php [QSA,L]
+	# browse/ 的通通導給 ./browse.php
+	RewriteRule ^browse(/|$) browse.php [QSA,L]
+	RewriteRule ^dl/ download.php [QSA,L]
 </IfModule>
 
 <IfModule headers_module>
