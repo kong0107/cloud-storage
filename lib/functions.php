@@ -155,6 +155,7 @@ function finish($status = 204, $title = '', $meta = null) {
 		}
 	}
 	else if ($title) site_log("$status $title");
+	else site_log("HTTP $status");
 
 	if ($status < 400) {
 		http_response_code($status);

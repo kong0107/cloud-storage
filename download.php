@@ -3,7 +3,7 @@ require_once __DIR__ . '/lib/user_authn.php';
 assert_login();
 
 $path = substr($_SERVER['REQUEST_URI'], strlen(CONFIG['site.base']) + 3);
-$fullpath = CONFIG['dir.storage'] . $path;
+$fullpath = CONFIG['dir.storage'] . urldecode($path);
 if (! file_exists($fullpath)) finish(404);
 
 /// 靜態的標頭

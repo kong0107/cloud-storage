@@ -1,7 +1,7 @@
 <?php
 require '../lib/user_authn.php';
 assert_login();
-if (! isset($_GET['path']) || str_contains($_GET['path'], '..')) finish(406);
+if (! isset($_GET['path']) || str_contains($_GET['path'], '..')) finish(403);
 
 $fullpath = DIR_STORAGE . "/{$_GET['path']}";
 if (! file_exists($fullpath)) finish(404);
@@ -31,20 +31,25 @@ function file_get_stat($path) {
 			break;
 		}
 		case 'dir': {
-			$result['files'] = array_values(array_diff(
-				scandir($path),
-				array('.', '..')
-			));
+			$files = array();
+			foreach (scandir($path) as $name) {
+				if ($name === '.' || $name === '..') continue;
+				$child = new SplFileInfo($fInfo->getRealPath() . "/$name");
+				$files[] = array(
+					'name' => $name,
+					'type' => $child->getType(),
+					'size' => $child->getSize(),
+					'mtime' => $child->getMTime()
+				);
+			}
+			$result['files'] = $files;
 			break;
 		}
 		case 'link': {
 			$result['target'] = file_get_stat($fInfo->getRealPath());
 			break;
 		}
-		case 'unknown':
-		case false: {
-			return null;
-		}
+		default: return null;
 	}
 
 	return $result;
