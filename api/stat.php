@@ -1,7 +1,7 @@
 <?php
 require '../lib/user_authn.php';
 assert_login();
-if (! isset($_GET['path']) || str_contains($_GET['path'], '..')) finish(403);
+if (! isset($_GET['path']) || str_contains($_GET['path'], '../')) finish(403);
 
 $fullpath = DIR_STORAGE . "/{$_GET['path']}";
 if (! file_exists($fullpath)) finish(404);

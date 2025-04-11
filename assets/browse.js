@@ -48,20 +48,24 @@ fetchJSON(`api/stat.php?path=${path}`)
 					return (a.name > b.name) ? 1 : -1;
 				});
 				contents.push(
-					['ul', {class: 'd-table', style: 'border-collapse: separate; border-spacing: .5rem;'},
+					['ul', {class: 'd-md-table', style: 'border-collapse: separate; border-spacing: .5rem;'},
 						...stat.files.map(file => {
 							let icon;
 							if (file.type === 'file') icon = 'file-earmark-richtext';
 							else if (file.type === 'dir') icon = 'folder';
 							else if (file.target.type === 'dir') icon = 'folder-symlink';
 							else icon = 'patch-question';
-							return ['li', {class: 'd-table-row'},
-								['span', {class: 'd-table-cell'}, ['i', {class: `bi bi-${icon}`, title: file.type}]],
-								['a', {class: 'd-table-cell', href: `browse/${path}${file.name}`}, file.name],
-								['span', {class: 'd-table-cell text-end'},
-									(file.type === 'file') ? (numFormat(file.size / 1024) + ' KB') : ''
-								],
-								['time', {class: 'd-table-cell'}, dateFormat('y-m-d H:i', file.mtime * 1000)]
+							return ['li', {class: 'd-md-table-row'},
+								['span', {class: 'd-inline d-md-table-cell'}, ['i', {class: `bi bi-${icon}`, title: file.type}]],
+								['a', {class: 'd-inline d-md-table-cell', href: `browse/${path}${file.name}`}, file.name],
+								['div', {class: 'd-block d-md-table-cell'},
+									['div', {class: 'd-flex'},
+										['span', {class: 'text-end flex-grow-1 px-2'},
+											(file.type === 'file') ? (numFormat(file.size / 1048576) + ' MB') : ''
+										],
+										['time', {}, dateFormat('y-m-d H:i', file.mtime * 1000)]
+									]
+								]
 							]
 						})
 					]
@@ -89,6 +93,7 @@ fetchJSON(`api/stat.php?path=${path}`)
 									const file = this.files[index];
 									sizeTotal += file.size;
 									qCheckProgress = qCheckProgress.then(async () => {
+										console.debug(`CheckProgress #${index} start`);
 										let time = Date.now();
 										const blobBuffer = await file.arrayBuffer();
 										const hashBuffer = await crypto.subtle.digest('SHA-256', blobBuffer);
@@ -104,7 +109,7 @@ fetchJSON(`api/stat.php?path=${path}`)
 											+ numFormat(file.size / 1048576)
 											+ ' MB.'
 										);
-										console.debug('base64: ' + btoa(hashBuffer));
+										// console.debug('base64: ' + btoa(hashBuffer.toString()));
 
 										time = Date.now();
 										let {size: progress} = await fetchJSON(`api/progress.php?hash=${hash}`);
@@ -114,6 +119,7 @@ fetchJSON(`api/stat.php?path=${path}`)
 										$('progress#total').value += progressMB;
 
 										qUpload = qUpload.then(async () => {
+											console.debug(`Upload #${index} start`);
 											const chunkSize = 1048576;
 											const fd = new FormData();
 											fd.set('path', path + file.name);
@@ -132,7 +138,9 @@ fetchJSON(`api/stat.php?path=${path}`)
 												$('progress#total').value += realChunkSizeMB;
 											}
 											$(`tr[data-index="${index}"] .status`).textContent = '上傳完成';
+											console.debug(`Upload #${index} end`);
 										}); /* qUpload */
+										console.debug(`CheckProgress #${index} end`);
 									}); /* qCheckProgress */
 								} /* for this.files */
 
@@ -140,24 +148,24 @@ fetchJSON(`api/stat.php?path=${path}`)
 								this.closest('fieldset').append(
 									['progress', {id: 'total', class: 'w-100', max: sizeTotalMB, value: 0}],
 									['div', `${this.files.length} 個檔案共 ` + numFormat(sizeTotalMB) + ' MB'],
-									['table', {class: 'table d-md-block'},
-										['thead', {class: 'd-md-none'},
-											['tr',
+									['table', {class: 'd-block d-md-table'},
+										['thead', {},
+											['tr', {class: 'd-none d-md-table-row'}
 												['th', '檔名'],
 												['th', '尺寸'],
 												['th', '上傳狀態']
 											]
 										],
-										['tbody', {class: 'd-md-block'},
+										['tbody', {},
 											...[...this.files].map((file, index) => {
 												const sizeMB = file.size / 1048576;
-												return ['tr', {class: 'd-md-block', data: {index}},
-													['td', {class: 'd-md-block'},
+												return ['tr', {class: 'd-block d-md-table-row', data: {index}},
+													['td', {class: 'd-block d-md-table-cell'},
 														file.name,
 														['div', {class: 'status small text-secondary'}, '等待中']
 													],
-													['td', {class: 'd-md-block'}, numFormat(sizeMB) + ' MB'],
-													['td',
+													['td', {class: 'd-block d-md-table-cell'}, numFormat(sizeMB) + ' MB'],
+													['td', {class: 'd-block d-md-table-cell'},
 														['progress', {max: sizeMB}]
 													]
 												]; /* <tr> */

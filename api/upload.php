@@ -10,7 +10,7 @@ if (ini_parse_quantity(ini_get('upload_max_filesize')) < 1048576)
  * * $_FILES: chunk
  */
 
-if (empty($_POST['path']) || str_contains($_POST['path'], '..')) finish(403);
+if (empty($_POST['path']) || str_contains($_POST['path'], '../')) finish(403);
 if (empty($_FILES) || empty($_FILES['chunk'])) finish(403);
 
 $chunk = $_FILES['chunk'];
