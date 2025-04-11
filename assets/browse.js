@@ -1,197 +1,208 @@
+/**
+ * @todo mkdir
+ * @todo skip duplicate file before upload
+ * @todo rename
+ * @todo delete
+ * @todo base64url as hash func
+ */
+
 if (! location.pathname.includes('/browse/')) {
 	history.replaceState(null, '', 'browse/');
 }
 
-let path = location.pathname.slice(location.pathname.indexOf('/browse/') + 8);
-console.debug(`Required path: ${decodeURIComponent(path)}`);
+// let path = location.pathname.slice(location.pathname.indexOf('/browse/') + 8);
+// console.debug(`Required path: ${decodeURIComponent(path)}`);
 
 /** function */
 const numFormat = new Intl.NumberFormat(undefined, {minimumFractionDigits: 1, maximumFractionDigits:1, roundingMode: 'ceil'}).format;
 
-fetchJSON(`api/stat.php?path=${path}`)
-.then(stat => {
-	console.debug(path, stat);
+route();
+async function route(path) {
+	if (path === undefined) {
+		path = location.pathname.slice(new URL($('base').href).pathname.length + 7);
+	}
+	const stat = await fetchJSON(`api/stat.php?path=${path}`);
+	console.debug('stat', path, stat);
+
 	if (stat.type === 'dir') {
 		if (path && ! path.endsWith('/')) path += '/';
+		history.replaceState(null, '', `browse/${path}`);
 	}
 
-	const segArr = path.split('/').filter(x => x);
-	segArr.unshift('');
-	$('#breadcrumbs').replaceChildren(
-		...segArr.map((segment, i) => {
-			if (i === segArr.length - 1)
-				return ['li', {class: 'list-inline-item'}, segment + (stat.type === 'dir' ? '/' : '')];
-			const href = 'browse' + segArr.slice(0, i + 1).join('/');
-			return ['li', {class: 'list-inline-item'},
-				['a', {href, class: 'text-decoration-none'}, `${segment}/`]
+	$('.breadcrumb').replaceChildren(
+		...['', ...path.split('/').filter(x => x)]
+		.map((segment, i, array) => {
+			if (i === array.length - 1) return ['li',
+				{class: 'breadcrumb-item active', aria: {current: 'page'}},
+				(stat.type === 'dir') ? `${segment}/` : segment
+			];
+			const href = 'browse' + array.slice(0, i + 1).join('/');
+			return ['li', {class: 'breadcrumb-item'},
+				['a', {href}, `${segment}/`]
 			];
 		})
 	);
 
-	if (stat.type !== 'dir') {
-		$('#stat').replaceChildren(
-			...Object.keys(stat).map(key =>
-				['li', {}, `${key}: ${stat[key]}`]
-			)
-		);
-	}
-	else $('#stat').replaceChildren();
+	if (! path) delete stat.name;
+	$('#stat').replaceChildren(
+		...Object.keys(stat)
+		.filter(key => typeof stat[key] !== 'object')
+		.map(key =>
+			['dl', {class: 'd-table-row'},
+				['dt', {class: 'd-table-cell'}, key],
+				['dd', {class: 'd-table-cell'}, stat[key]]
+			]
+		)
+	);
 
-	const contents = [];
+	hide('#operation-dir', '#operation-file', '#upload-progress-uploader');
+	clear('#content', '#files');
+
 	switch (stat.type) {
 		case 'dir': {
-			/// @todo mkdir
-			if (! stat.files.length) contents.push('本目錄無內容');
-			else {
+			show('#operation-dir');
+			if (stat.files.length) {
 				stat.files.sort((a, b) => {
 					if (a.type !== b.type) return (a.type > b.type) ? 1 : -1;
 					return (a.name > b.name) ? 1 : -1;
 				});
-				contents.push(
-					['ul', {class: 'd-md-table', style: 'border-collapse: separate; border-spacing: .5rem;'},
-						...stat.files.map(file => {
-							let icon;
-							if (file.type === 'file') icon = 'file-earmark-richtext';
-							else if (file.type === 'dir') icon = 'folder';
-							else if (file.target.type === 'dir') icon = 'folder-symlink';
-							else icon = 'patch-question';
-							return ['li', {class: 'd-md-table-row'},
-								['span', {class: 'd-inline d-md-table-cell'}, ['i', {class: `bi bi-${icon}`, title: file.type}]],
-								['a', {class: 'd-inline d-md-table-cell', href: `browse/${path}${file.name}`}, file.name],
-								['div', {class: 'd-block d-md-table-cell'},
-									['div', {class: 'd-flex'},
-										['span', {class: 'text-end flex-grow-1 px-2'},
-											(file.type === 'file') ? (numFormat(file.size / 1048576) + ' MB') : ''
-										],
-										['time', {}, dateFormat('y-m-d H:i', file.mtime * 1000)]
-									]
+				$('#files').append(
+					...stat.files.map(child => {
+						let icon = 'patch-question';
+						if (child.type === 'file') icon = 'file-earmark-richtext';
+						else if (child.type === 'dir') icon = 'folder';
+						else if (child.target.type === 'dir') icon = 'folder-symlink';
+						return ['li', {class: 'd-md-table-row'},
+							['span', {class: 'd-inline d-md-table-cell'}, ['i', {class: `bi bi-${icon}`, title: child.type}]],
+							['a', {class: 'd-inline d-md-table-cell', href: `browse/${path}${child.name}`}, child.name],
+							['div', {class: 'd-block d-md-table-cell'},
+								['div', {class: 'd-flex'},
+									['span', {class: 'text-end flex-grow-1 px-2'},
+										(child.type === 'file') ? (numFormat(child.size / 1048576) + ' MB') : ''
+									],
+									['time', {}, dateFormat('y-m-d H:i', child.mtime * 1000)]
 								]
 							]
-						})
-					]
+						];
+					})
 				);
-				contents.push(
-					['fieldset'
-						['legned', '新建資料夾']
-					]
-				);
-				contents.push(
-					['fieldset',
-						['legend', '上傳'],
-						['input', {
-							type: 'file',
-							multiple: true,
-							onchange: async function () {
-								if (! this.files.length) return;
-								console.debug(this.files);
-
-								let qCheckProgress, qUpload;
-								qCheckProgress = qUpload = Promise.resolve();
-
-								let sizeTotal = 0;
-								for (let index = 0; index < this.files.length; ++index) {
-									const file = this.files[index];
-									sizeTotal += file.size;
-									qCheckProgress = qCheckProgress.then(async () => {
-										console.debug(`CheckProgress #${index} start`);
-										let time = Date.now();
-										const blobBuffer = await file.arrayBuffer();
-										const hashBuffer = await crypto.subtle.digest('SHA-256', blobBuffer);
-										const hash = Array.from(
-											new Uint8Array(hashBuffer),
-											byte => byte.toString(16).padStart(2, '0')
-										).join('');
-										console.debug(hash);
-										console.debug(
-											'calculated hash in '
-											+ (Date.now() - time)
-											+ ' ms for a file with size '
-											+ numFormat(file.size / 1048576)
-											+ ' MB.'
-										);
-										// console.debug('base64: ' + btoa(hashBuffer.toString()));
-
-										time = Date.now();
-										let {size: progress} = await fetchJSON(`api/progress.php?hash=${hash}`);
-										console.debug(`checked in ${Date.now() - time} ms for the file has been uploaded for ${progress} bytes.`);
-										const progressMB = progress / 1048576;
-										$(`tr[data-index="${index}"] progress`).value = progressMB;
-										$('progress#total').value += progressMB;
-
-										qUpload = qUpload.then(async () => {
-											console.debug(`Upload #${index} start`);
-											const chunkSize = 1048576;
-											const fd = new FormData();
-											fd.set('path', path + file.name);
-											fd.set('size', file.size);
-
-											$(`tr[data-index="${index}"] .status`).textContent = '上傳中';
-											for (let offset = progress; offset < file.size; offset += chunkSize) {
-												fd.set('offset', offset);
-												fd.set('chunk', file.slice(offset, offset + chunkSize), hash);
-												const upload = await fetchJSON('api/upload.php', {
-													method: 'POST',
-													body: fd
-												});
-												const realChunkSizeMB = (upload.progress - offset) / 1048576;
-												$(`tr[data-index="${index}"] progress`).value += realChunkSizeMB;
-												$('progress#total').value += realChunkSizeMB;
-											}
-											$(`tr[data-index="${index}"] .status`).textContent = '上傳完成';
-											console.debug(`Upload #${index} end`);
-										}); /* qUpload */
-										console.debug(`CheckProgress #${index} end`);
-									}); /* qCheckProgress */
-								} /* for this.files */
-
-								const sizeTotalMB = sizeTotal / 1048576;
-								this.closest('fieldset').append(
-									['progress', {id: 'total', class: 'w-100', max: sizeTotalMB, value: 0}],
-									['div', `${this.files.length} 個檔案共 ` + numFormat(sizeTotalMB) + ' MB'],
-									['table', {class: 'd-block d-md-table'},
-										['thead', {},
-											['tr', {class: 'd-none d-md-table-row'}
-												['th', '檔名'],
-												['th', '尺寸'],
-												['th', '上傳狀態']
-											]
-										],
-										['tbody', {},
-											...[...this.files].map((file, index) => {
-												const sizeMB = file.size / 1048576;
-												return ['tr', {class: 'd-block d-md-table-row', data: {index}},
-													['td', {class: 'd-block d-md-table-cell'},
-														file.name,
-														['div', {class: 'status small text-secondary'}, '等待中']
-													],
-													['td', {class: 'd-block d-md-table-cell'}, numFormat(sizeMB) + ' MB'],
-													['td', {class: 'd-block d-md-table-cell'},
-														['progress', {max: sizeMB}]
-													]
-												]; /* <tr> */
-											})
-										] /* <tbody> */
-									] /* <table> */
-								); /* <fieldset>.append */
-							} /* <input onchange> */
-						}], /* <input type="file"> */
-					] /* <fieldset> */
-				); /* contents.push */
 			}
+			else $('#content').append('本目錄尚無內容');
 			break;
 		}
 		case 'file': {
-			contents.push(
-				['a', {
-					href: `dl/${path}`,
-					download: stat.name
-				}, '下載']
-			);
+			show('#operation-file');
+			$('#btn-download').set({
+				href: `dl/${path}`,
+				download: stat.name
+			});
 			break;
 		}
+		default: {
+			$('#content').append('未支援的檔案類型');
+		}
 	}
-	$('#content').replaceChildren(...contents);
-})
-.catch(() => {
-	$('main').setText('請先登入');
+
+}
+
+function hide(...ss) { ss.forEach(s => $(s)?.classList.add('d-none')); }
+function show(...ss) { ss.forEach(s => $(s)?.classList.remove('d-none')); }
+function clear(...ss) { ss.forEach(s => $(s)?.replaceChildren()); }
+
+listen('form#mkdir', 'onsubmit', function (event) {
+	event.preventDefault();
+	fetchStrict('api/mkdir.php', {
+		method: 'POST',
+		body: {path: path + $('#mkdir-input').value}
+	})
+	.then(() => {
+		// todo
+		alert('新增資料夾成功');
+		route();
+	})
+	.catch(alerter('failure'));
 });
+
+
+listen('[type=file]', 'onchange', function (event) {
+	const files = event.target.files;
+	if (! files.length) return;
+	console.debug(files);
+
+	let qCheckProgress, qUpload;
+	qCheckProgress = qUpload = Promise.resolve();
+
+	let sizeTotal = 0;
+	for (let index = 0; index < files.length; ++index) {
+		const file = files[index];
+		sizeTotal += file.size;
+		qCheckProgress = qCheckProgress.then(async () => {
+			// console.debug(`CheckProgress #${index} start`);
+			let time = Date.now();
+			const blobBuffer = await file.arrayBuffer();
+			const hashBuffer = await crypto.subtle.digest('SHA-256', blobBuffer);
+			const hash = btoa(String.fromCharCode(...new Uint8Array(hashBuffer)))
+				.replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '');
+			console.debug(`Calculated hash in ${Date.now() - time} ms for a file with size ${numFormat(file.size / 1048576)} MB.`);
+
+			let {size: progress} = await fetchJSON(`api/progress.php?hash=${hash}`);
+			const progressMB = progress / 1048576;
+			$(`tr[data-index="${index}"] progress`).value = progressMB;
+			$('progress#total').value += progressMB;
+
+			qUpload = qUpload.then(async () => {
+				// console.debug(`Upload #${index} start`);
+				const chunkSize = 1048576;
+				const fd = new FormData();
+				fd.set('path', path + file.name);
+				fd.set('size', file.size);
+
+				$(`tr[data-index="${index}"] .status`).textContent = '上傳中';
+				time = Date.now();
+				for (let offset = progress; offset < file.size; offset += chunkSize) {
+					fd.set('offset', offset);
+					fd.set('chunk', file.slice(offset, offset + chunkSize), hash);
+					const upload = await fetchJSON('api/upload.php', {
+						method: 'POST',
+						body: fd
+					});
+					const realChunkSizeMB = (upload.progress - offset) / 1048576;
+					$(`tr[data-index="${index}"] progress`).value += realChunkSizeMB;
+					$('progress#total').value += realChunkSizeMB;
+				}
+				console.debug(`Uploaded ${file.size - progress} bytes in ${Date.now() - time} ms.`);
+				$(`tr[data-index="${index}"] .status`).textContent = '上傳完成';
+				// console.debug(`Upload #${index} end`);
+			}); /* qUpload */
+			// console.debug(`CheckProgress #${index} end`);
+		}); /* qCheckProgress */
+	} /* for files */
+
+	const sizeTotalMB = sizeTotal / 1048576;
+	$('#upload-progress').replaceChildren(
+		['progress', {id: 'total', class: 'w-100', max: sizeTotalMB, value: 0}],
+		['div', `${files.length} 個檔案共 ` + numFormat(sizeTotalMB) + ' MB'],
+		['table', {class: 'd-block d-md-table w-100'},
+			['thead', {},
+				['tr', {class: 'd-none d-md-table-row'},
+					['th', '檔名'],
+					['th', '尺寸'],
+					['th', '上傳狀態']
+				]
+			],
+			['tbody', {},
+				...[...files].map((file, index) => {
+					const sizeMB = file.size / 1048576;
+					return ['tr', {class: 'd-block d-md-table-row', data: {index}},
+						['td', {class: 'd-block d-md-table-cell'}, file.name],
+						['td', {class: 'd-block d-md-table-cell'}, numFormat(sizeMB) + ' MB'],
+						['td', {class: 'd-block d-md-table-cell'},
+							['progress', {max: sizeMB}],
+							['div', {class: 'status small text-secondary'}, '等待中']
+						]
+					]; /* <tr> */
+				})
+			] /* <tbody> */
+		] /* <table> */
+	); /* <fieldset>.append */
+}); /* listen('[type=file]', 'onchange') */
